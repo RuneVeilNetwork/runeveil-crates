@@ -12,6 +12,12 @@
   "requiredKey": "vote",
   # Per-crate open cooldown for this crate type. Use -1 to fall back to openCooldownSeconds in settings.json.
   "cooldownSeconds": 0,
+  # Optional per-crate overrides. null/inherit uses settings.json.
+  "consumeKeyOnOpen": null,
+  "broadcastRareRewards": null,
+  "rollAnimationEnabled": null,
+  "pityPullsWithoutRarePlus": null,
+  "inventoryFullPolicy": "inherit",
   # id: Unique name for this reward entry (any text, used internally).
   # type: item = give an item. command = run console commands.
   # item: Item ID for type item (example: minecraft:diamond).

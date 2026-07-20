@@ -94,7 +94,7 @@ public final class CrateHologramManager {
         for (ServerLevel level : manager.getServer().getAllLevels()) {
             List<ArmorStand> holograms = new ArrayList<>(level.getEntitiesOfClass(ArmorStand.class, worldBounds(level)));
             for (ArmorStand stand : holograms) {
-                if (!isManagedHologram(stand) && !looksLikeLegacyHologram(stand)) {
+                if (!isManagedHologram(stand)) {
                     continue;
                 }
                 String locationKey = stand.getPersistentData().getString(LOCATION_NBT);
@@ -130,7 +130,7 @@ public final class CrateHologramManager {
     }
 
     private static ArmorStand getOrCreate(ServerLevel level, BlockPos pos, SettingsConfig settings) {
-        ensureChunkLoaded(level, pos);
+        if (!level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) return null;
         String key = CrateLocationKey.encode(level.dimension(), pos);
 
         UUID cachedId = HOLOGRAM_IDS.get(key);
@@ -183,7 +183,7 @@ public final class CrateHologramManager {
     }
 
     private static int purgeHologramsAt(ServerLevel level, BlockPos pos, SettingsConfig settings) {
-        ensureChunkLoaded(level, pos);
+        if (!level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) return 0;
         String key = CrateLocationKey.encode(level.dimension(), pos);
         HOLOGRAM_IDS.remove(key);
 
@@ -196,7 +196,7 @@ public final class CrateHologramManager {
     }
 
     private static List<ArmorStand> findHologramsAt(ServerLevel level, BlockPos pos, SettingsConfig settings) {
-        ensureChunkLoaded(level, pos);
+        if (!level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) return List.of();
         List<ArmorStand> found = new ArrayList<>();
         for (ArmorStand stand : level.getEntitiesOfClass(ArmorStand.class, searchBox(pos, settings))) {
             if (isHologramCandidate(stand, pos, settings)) {
@@ -215,10 +215,6 @@ public final class CrateHologramManager {
             return 1;
         }
         return 2;
-    }
-
-    private static void ensureChunkLoaded(ServerLevel level, BlockPos pos) {
-        level.getChunk(pos);
     }
 
     private static void tagHologram(ArmorStand stand, String locationKey) {
@@ -246,17 +242,7 @@ public final class CrateHologramManager {
         if (!isNearCrateHologramSpot(stand, pos, settings)) {
             return false;
         }
-        return isManagedHologram(stand)
-                || looksLikeLegacyHologram(stand)
-                || (stand.hasCustomName() && stand.isCustomNameVisible())
-                || (stand.isInvisible() && stand.hasCustomName());
-    }
-
-    private static boolean looksLikeLegacyHologram(ArmorStand stand) {
-        return stand.isInvisible()
-                && stand.isNoGravity()
-                && stand.isCustomNameVisible()
-                && stand.hasCustomName();
+        return isManagedHologram(stand);
     }
 
     private static boolean isNearCrateHologramSpot(ArmorStand stand, BlockPos pos, SettingsConfig settings) {
@@ -270,7 +256,7 @@ public final class CrateHologramManager {
     private static int removeTaggedHolograms(ServerLevel level) {
         int removed = 0;
         for (ArmorStand stand : new ArrayList<>(level.getEntitiesOfClass(ArmorStand.class, worldBounds(level)))) {
-            if (isManagedHologram(stand) || looksLikeLegacyHologram(stand)) {
+            if (isManagedHologram(stand)) {
                 stand.discard();
                 removed++;
             }

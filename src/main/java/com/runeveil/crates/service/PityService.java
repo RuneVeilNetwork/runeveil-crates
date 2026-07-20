@@ -27,7 +27,10 @@ public final class PityService {
         if (pity == null || !pity.enabled) {
             return false;
         }
-        return getPullsSinceRarePlus(manager, player.getUUID(), crateId) >= Math.max(1, pity.pullsWithoutRarePlus);
+        var crate = manager.getCrate(crateId);
+        int threshold = crate != null && crate.pityPullsWithoutRarePlus != null
+                ? crate.pityPullsWithoutRarePlus : pity.pullsWithoutRarePlus;
+        return getPullsSinceRarePlus(manager, player.getUUID(), crateId) >= Math.max(1, threshold);
     }
 
     public static void recordRoll(CrateConfigManager manager, ServerPlayer player, String crateId, String rarity) {
@@ -46,6 +49,6 @@ public final class PityService {
         } else {
             crateCounts.put(crateKey, getPullsSinceRarePlus(manager, player.getUUID(), crateId) + 1);
         }
-        manager.savePityStorage();
+        manager.markPityDirty();
     }
 }

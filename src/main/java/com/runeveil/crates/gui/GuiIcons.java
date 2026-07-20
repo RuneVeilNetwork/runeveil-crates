@@ -25,6 +25,8 @@ public final class GuiIcons {
     public static final int SAVE = 2214;
     public static final int CLOSE = 2215;
     public static final int ADD_HOTBAR = 2216;
+    public static final int DUPLICATE_EXPORT = 2217;
+    public static final int DELETE_CRATE = 2218;
 
     private GuiIcons() {
     }
@@ -64,6 +66,8 @@ public final class GuiIcons {
             case SAVE -> Items.EMERALD;
             case CLOSE -> Items.REDSTONE_BLOCK;
             case ADD_HOTBAR -> Items.CHEST;
+            case DUPLICATE_EXPORT -> Items.MAP;
+            case DELETE_CRATE -> Items.LAVA_BUCKET;
             default -> Items.BARRIER;
         };
     }

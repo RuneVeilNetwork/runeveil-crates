@@ -2,6 +2,7 @@ package com.runeveil.crates.gui;
 
 import com.runeveil.crates.config.CrateDefinition;
 import com.runeveil.crates.config.RewardEntry;
+import com.runeveil.crates.config.SettingsConfig;
 import com.runeveil.crates.util.RarityDefinitions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -20,12 +21,16 @@ public class CrateEditorSession {
     public String currentRarity = "common";
     public int currentPage = 0;
     public RewardEntry selectedReward = null;
+    public boolean confirmingRemoval = false;
+    public boolean confirmingCrateDelete = false;
+    public final SettingsConfig settings;
 
-    public CrateEditorSession(BlockPos cratePos, ResourceKey<Level> dimension, String crateId, CrateDefinition source) {
+    public CrateEditorSession(BlockPos cratePos, ResourceKey<Level> dimension, String crateId, CrateDefinition source, SettingsConfig settings) {
         this.cratePos = cratePos;
         this.dimension = dimension;
         this.crateId = crateId;
         this.workingCopy = copy(source);
+        this.settings = settings;
     }
 
     public List<RewardEntry> rewardsForRarity() {
@@ -72,6 +77,11 @@ public class CrateEditorSession {
         copy.displayName = source.displayName;
         copy.requiredKey = source.requiredKey;
         copy.cooldownSeconds = source.cooldownSeconds;
+        copy.consumeKeyOnOpen = source.consumeKeyOnOpen;
+        copy.broadcastRareRewards = source.broadcastRareRewards;
+        copy.rollAnimationEnabled = source.rollAnimationEnabled;
+        copy.pityPullsWithoutRarePlus = source.pityPullsWithoutRarePlus;
+        copy.inventoryFullPolicy = source.inventoryFullPolicy;
         copy.rewards = new ArrayList<>();
         if (source.rewards != null) {
             for (RewardEntry reward : source.rewards) {

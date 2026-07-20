@@ -5,6 +5,8 @@ import com.runeveil.crates.config.CrateDefinition;
 import com.runeveil.crates.config.RewardEntry;
 import com.runeveil.crates.util.RarityDefinitions;
 import com.runeveil.crates.util.RewardItems;
+import com.runeveil.crates.service.RewardProbabilityService;
+import com.runeveil.crates.visual.CrateHologramManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -36,6 +38,8 @@ public final class CrateEditorService {
     private static final int RARITY_TAB_START = 0;
     private static final int RARITY_TAB_END = 4;
     private static final int SLOT_ADD_HOTBAR = 6;
+    private static final int SLOT_DUPLICATE_EXPORT = 5;
+    private static final int SLOT_DELETE_CRATE = 7;
     private static final int HOTBAR_SLOT_START = 0;
     private static final int HOTBAR_SLOT_END = 8;
     private static final int SLOT_INFO = 8;
@@ -69,7 +73,7 @@ public final class CrateEditorService {
             return false;
         }
 
-        CrateEditorSession session = new CrateEditorSession(pos, dimension, crateId, crate);
+        CrateEditorSession session = new CrateEditorSession(pos, dimension, crateId, crate, manager.getSettings());
         SESSIONS.put(player.getUUID(), session);
         SimpleContainer container = new SimpleContainer(54);
         populateContainer(container, session);
@@ -125,7 +129,8 @@ public final class CrateEditorService {
         List<RewardEntry> pageRewards = session.pageRewards();
         for (int i = 0; i < pageRewards.size() && i <= (REWARD_END - REWARD_START); i++) {
             RewardEntry reward = pageRewards.get(i);
-            container.setItem(REWARD_START + i, rewardIcon(reward, reward == session.selectedReward));
+            double chance = RewardProbabilityService.probabilities(session.workingCopy, session.settings).getOrDefault(reward, 0.0D);
+            container.setItem(REWARD_START + i, rewardIcon(reward, reward == session.selectedReward, chance));
         }
 
         container.setItem(SLOT_PREV_PAGE, GuiIcons.icon(GuiIcons.PREV_PAGE, "Previous Page", "Shows earlier " + session.currentRarity + " rewards", ChatFormatting.YELLOW));
@@ -137,6 +142,10 @@ public final class CrateEditorService {
         container.setItem(SLOT_REMOVE, GuiIcons.icon(GuiIcons.REMOVE, "Remove Reward", "Removes the selected reward", ChatFormatting.RED));
         container.setItem(SLOT_SAVE, GuiIcons.icon(GuiIcons.SAVE, "Save Loot Table", "Writes changes to config file", ChatFormatting.GREEN));
         container.setItem(SLOT_CLOSE, GuiIcons.icon(GuiIcons.CLOSE, "Close", "Close without saving again", ChatFormatting.RED));
+        container.setItem(SLOT_DUPLICATE_EXPORT, GuiIcons.icon(GuiIcons.DUPLICATE_EXPORT, "Crate File Actions", "Left duplicate | Right export | Shift+Left rename | Shift+Right import", ChatFormatting.AQUA));
+        container.setItem(SLOT_DELETE_CRATE, GuiIcons.icon(GuiIcons.DELETE_CRATE,
+                session.confirmingCrateDelete ? "Click Again to Delete Crate" : "Delete Crate",
+                "Requires a second click; rename/import use /crate commands", ChatFormatting.RED));
     }
 
     private static int countForRarity(CrateEditorSession session, String rarity) {
@@ -159,7 +168,7 @@ public final class CrateEditorService {
         return value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1);
     }
 
-    private static ItemStack rewardIcon(RewardEntry reward, boolean selected) {
+    private static ItemStack rewardIcon(RewardEntry reward, boolean selected, double chance) {
         ItemStack stack;
         if ("command".equalsIgnoreCase(reward.type)) {
             stack = new ItemStack(Items.COMMAND_BLOCK);
@@ -175,6 +184,7 @@ public final class CrateEditorService {
         lore.add(Component.literal("Type: " + reward.type).withStyle(ChatFormatting.GRAY));
         lore.add(Component.literal("Weight: " + reward.weight + " (within " + reward.rarity + ")").withStyle(ChatFormatting.GOLD));
         lore.add(Component.literal("Rarity: " + reward.rarity).withStyle(RarityDefinitions.color(reward.rarity)));
+        lore.add(Component.literal(String.format(Locale.ROOT, "Effective chance: %.3f%%", chance * 100.0D)).withStyle(ChatFormatting.AQUA));
         if ("item".equalsIgnoreCase(reward.type)) {
             lore.add(Component.literal("Item: " + reward.item).withStyle(ChatFormatting.DARK_GRAY));
             lore.add(Component.literal("Count: " + reward.minCount + "-" + reward.maxCount).withStyle(ChatFormatting.DARK_GRAY));
@@ -241,6 +251,54 @@ public final class CrateEditorService {
                 addHotbarRewards(serverPlayer);
                 populateContainer(editorContainer, session);
                 broadcastChanges();
+                return;
+            }
+
+            if (slotId == SLOT_DUPLICATE_EXPORT) {
+                if (clickType == ClickType.QUICK_MOVE) {
+                    String entered = normalizeFileName(owner.getMainHandItem().getHoverName().getString());
+                    if (entered.isBlank()) {
+                        owner.sendSystemMessage(Component.literal("Hold a custom-named item containing the crate ID or import file name.").withStyle(ChatFormatting.RED));
+                    } else if (dragType == 1) {
+                        var imported = manager.importCrate(entered.endsWith(".json") ? entered : entered + ".json");
+                        owner.sendSystemMessage(Component.literal(imported == null ? "Import failed." : "Imported " + imported.id + ".")
+                                .withStyle(imported == null ? ChatFormatting.RED : ChatFormatting.GREEN));
+                    } else if (manager.renameCrate(session.crateId, entered)) {
+                        owner.sendSystemMessage(Component.literal("Renamed crate to " + entered + ". Reopen the editor.").withStyle(ChatFormatting.GREEN));
+                        owner.closeContainer();
+                    } else {
+                        owner.sendSystemMessage(Component.literal("Rename failed; that ID may already exist.").withStyle(ChatFormatting.RED));
+                    }
+                } else if (clickType == ClickType.PICKUP && dragType == 1) {
+                    var path = manager.exportCrate(session.crateId);
+                    owner.sendSystemMessage(Component.literal(path == null ? "Export failed." : "Exported to " + path).withStyle(path == null ? ChatFormatting.RED : ChatFormatting.GREEN));
+                } else {
+                    String base = session.crateId + "_copy";
+                    String id = base;
+                    int suffix = 2;
+                    while (manager.getCrate(id) != null) id = base + suffix++;
+                    var copy = manager.duplicateCrate(session.crateId, id);
+                    owner.sendSystemMessage(Component.literal(copy == null ? "Duplicate failed." : "Duplicated as " + copy.id + ". Use /crate rename to rename it.")
+                            .withStyle(copy == null ? ChatFormatting.RED : ChatFormatting.GREEN));
+                }
+                return;
+            }
+
+            if (slotId == SLOT_DELETE_CRATE) {
+                if (!session.confirmingCrateDelete) {
+                    session.confirmingCrateDelete = true;
+                    populateContainer(editorContainer, session);
+                    broadcastChanges();
+                    return;
+                }
+                String location = com.runeveil.crates.storage.CrateLocationKey.encode(session.dimension, session.cratePos);
+                manager.getLocations().locations.remove(location);
+                manager.saveLocations();
+                var level = manager.getServerLevel(session.dimension);
+                if (level != null) CrateHologramManager.remove(level, session.cratePos);
+                manager.deleteCrate(session.crateId);
+                owner.sendSystemMessage(Component.literal("Deleted crate " + session.crateId + ".").withStyle(ChatFormatting.RED));
+                owner.closeContainer();
                 return;
             }
 
@@ -382,8 +440,14 @@ public final class CrateEditorService {
         private void removeSelected() {
             RewardEntry reward = selectedReward();
             if (reward != null && session.workingCopy.rewards != null) {
+                if (!session.confirmingRemoval) {
+                    session.confirmingRemoval = true;
+                    owner.sendSystemMessage(Component.literal("Click Remove Reward again to confirm.").withStyle(ChatFormatting.YELLOW));
+                    return;
+                }
                 session.workingCopy.rewards.remove(reward);
                 session.selectedReward = null;
+                session.confirmingRemoval = false;
                 session.clampPage();
             }
         }
@@ -400,6 +464,11 @@ public final class CrateEditorService {
             manager.saveCrate(session.workingCopy);
             manager.reload();
             owner.sendSystemMessage(Component.literal("Saved loot table for " + session.workingCopy.displayName + ".").withStyle(ChatFormatting.GREEN));
+        }
+
+        private static String normalizeFileName(String value) {
+            if (value == null) return "";
+            return value.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_");
         }
 
         @Override

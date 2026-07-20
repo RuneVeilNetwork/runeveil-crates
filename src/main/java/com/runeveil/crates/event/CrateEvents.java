@@ -7,6 +7,7 @@ import com.runeveil.crates.gui.CrateEditorService;
 import com.runeveil.crates.integration.VotifierIntegration;
 import com.runeveil.crates.service.CrateService;
 import com.runeveil.crates.service.KeyService;
+import com.runeveil.crates.service.PendingKeyService;
 import com.runeveil.crates.visual.CrateRollAnimation;
 import com.runeveil.crates.util.MessageUtil;
 import net.minecraft.network.chat.Component;
@@ -35,6 +36,8 @@ public class CrateEvents {
                 if (++validationTicks >= 200) {
                     validationTicks = 0;
                     CrateService.cleanupInvalidLocations(configManager);
+                    CrateService.cleanupExpiredCooldowns();
+                    configManager.flushDirtyData();
                 }
             }
         }
@@ -46,6 +49,7 @@ public class CrateEvents {
             return;
         }
         VotifierIntegration.processUberswePendingVotes(player, configManager);
+        PendingKeyService.deliver(player, configManager);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -69,6 +73,9 @@ public class CrateEvents {
 
         event.setCanceled(true);
         event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+        if (event.getHand() != InteractionHand.MAIN_HAND) {
+            return;
+        }
 
         ItemStack mainHand = player.getMainHandItem();
         ItemStack offHand = player.getOffhandItem();
@@ -76,9 +83,7 @@ public class CrateEvents {
         boolean holdingCrateKey = hasCrateKey(mainHand) || hasCrateKey(offHand);
 
         if (hasKey) {
-            if (event.getHand() == InteractionHand.MAIN_HAND || mainHand.isEmpty()) {
-                CrateService.open(player, configManager, event.getPos());
-            }
+            CrateService.open(player, configManager, event.getPos());
             return;
         }
 

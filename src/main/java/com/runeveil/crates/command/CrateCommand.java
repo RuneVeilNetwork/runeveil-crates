@@ -12,6 +12,8 @@ import com.runeveil.crates.gui.CrateEditorService;
 import com.runeveil.crates.integration.VotifierIntegration;
 import com.runeveil.crates.service.CrateService;
 import com.runeveil.crates.service.KeyService;
+import com.runeveil.crates.service.PendingKeyService;
+import com.runeveil.crates.service.RewardProbabilityService;
 import com.runeveil.crates.storage.CrateLocationKey;
 import com.runeveil.crates.util.MessageUtil;
 import com.runeveil.crates.visual.CrateHologramManager;
@@ -23,6 +25,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.function.Supplier;
+import java.util.UUID;
 
 public final class CrateCommand {
     private CrateCommand() {
@@ -31,7 +34,7 @@ public final class CrateCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, Supplier<CrateConfigManager> configSupplier) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("crate")
                 .then(Commands.literal("convert")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .then(Commands.argument("type", StringArgumentType.word())
                                 .suggests((context, builder) -> {
                                     CrateConfigManager manager = configSupplier.get();
@@ -42,10 +45,10 @@ public final class CrateCommand {
                                 })
                                 .executes(ctx -> convert(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type")))))
                 .then(Commands.literal("unconvert")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .executes(ctx -> unconvert(ctx.getSource(), configSupplier.get())))
                 .then(Commands.literal("givekey")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .then(Commands.argument("type", StringArgumentType.word())
                                 .suggests((context, builder) -> {
                                     CrateConfigManager manager = configSupplier.get();
@@ -66,16 +69,16 @@ public final class CrateCommand {
                                                         IntegerArgumentType.getInteger(ctx, "amount")
                                                 ))))))
                 .then(Commands.literal("reload")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .executes(ctx -> reload(ctx.getSource(), configSupplier.get())))
                 .then(Commands.literal("info")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .executes(ctx -> info(ctx.getSource(), configSupplier.get())))
                 .then(Commands.literal("edit")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .executes(ctx -> edit(ctx.getSource(), configSupplier.get())))
                 .then(Commands.literal("settings")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasAdminPermission(source, configSupplier))
                         .then(Commands.literal("rollanimation")
                                 .executes(ctx -> showRollAnimation(ctx.getSource(), configSupplier.get()))
                                 .then(Commands.literal("enabled")
@@ -91,10 +94,44 @@ public final class CrateCommand {
                                         .then(Commands.argument("value", IntegerArgumentType.integer(1, 1200))
                                                 .executes(ctx -> setRollAnimationNumber(ctx.getSource(), configSupplier.get(), "finalHoldTicks", IntegerArgumentType.getInteger(ctx, "value")))))))
                 .then(Commands.literal("cleanupholograms")
-                        .requires(source -> source.hasPermission(2))
-                        .executes(ctx -> cleanupHolograms(ctx.getSource(), configSupplier.get())));
+                        .requires(source -> hasAdminPermission(source, configSupplier))
+                        .executes(ctx -> cleanupHolograms(ctx.getSource(), configSupplier.get())))
+                .then(Commands.literal("validate").requires(source -> hasAdminPermission(source, configSupplier))
+                        .executes(ctx -> validate(ctx.getSource(), configSupplier.get())))
+                .then(Commands.literal("preview").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("type", StringArgumentType.word())
+                                .executes(ctx -> preview(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type")))))
+                .then(Commands.literal("givekeyoffline").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("type", StringArgumentType.word())
+                                .then(Commands.argument("uuid", StringArgumentType.word())
+                                        .then(Commands.argument("amount", IntegerArgumentType.integer(1, 100000))
+                                                .executes(ctx -> giveKeyOffline(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), StringArgumentType.getString(ctx, "uuid"), IntegerArgumentType.getInteger(ctx, "amount")))))))
+                .then(Commands.literal("duplicate").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("source", StringArgumentType.word()).then(Commands.argument("newId", StringArgumentType.word())
+                                .executes(ctx -> duplicate(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "source"), StringArgumentType.getString(ctx, "newId"))))))
+                .then(Commands.literal("rename").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("oldId", StringArgumentType.word()).then(Commands.argument("newId", StringArgumentType.word())
+                                .executes(ctx -> rename(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "oldId"), StringArgumentType.getString(ctx, "newId"))))))
+                .then(Commands.literal("delete").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("type", StringArgumentType.word()).then(Commands.literal("confirm")
+                                .executes(ctx -> delete(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"))))))
+                .then(Commands.literal("export").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("type", StringArgumentType.word())
+                                .executes(ctx -> exportCrate(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type")))))
+                .then(Commands.literal("import").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("file", StringArgumentType.string())
+                                .executes(ctx -> importCrate(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "file")))))
+                .then(Commands.literal("override").requires(source -> hasAdminPermission(source, configSupplier))
+                        .then(Commands.argument("type", StringArgumentType.word()).then(Commands.argument("setting", StringArgumentType.word())
+                                .then(Commands.argument("value", StringArgumentType.word())
+                                        .executes(ctx -> setOverride(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), StringArgumentType.getString(ctx, "setting"), StringArgumentType.getString(ctx, "value")))))));
 
         dispatcher.register(root);
+    }
+
+    private static boolean hasAdminPermission(CommandSourceStack source, Supplier<CrateConfigManager> supplier) {
+        CrateConfigManager manager = supplier.get();
+        return source.hasPermission(manager == null ? 2 : manager.getSettings().adminPermissionLevel);
     }
 
     private static int showRollAnimation(CommandSourceStack source, CrateConfigManager manager) {
@@ -252,5 +289,83 @@ public final class CrateCommand {
             return 0;
         }
         return CrateEditorService.open(player, manager, pos) ? 1 : 0;
+    }
+
+    private static int validate(CommandSourceStack source, CrateConfigManager manager) {
+        if (manager == null) return 0;
+        var errors = manager.validateCurrent();
+        if (errors.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("RuneVeil Crates configuration is valid.").withStyle(net.minecraft.ChatFormatting.GREEN), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("Configuration has " + errors.size() + " error(s):"));
+        errors.forEach(error -> source.sendFailure(Component.literal("- " + error)));
+        return 0;
+    }
+
+    private static int preview(CommandSourceStack source, CrateConfigManager manager, String type) {
+        CrateDefinition crate = manager == null ? null : manager.getCrate(type);
+        if (crate == null) { source.sendFailure(Component.literal("Unknown crate type: " + type)); return 0; }
+        source.sendSuccess(() -> Component.literal(crate.displayName + " effective odds:"), false);
+        RewardProbabilityService.probabilities(crate, manager.getSettings()).forEach((reward, chance) ->
+                source.sendSuccess(() -> Component.literal(String.format(java.util.Locale.ROOT, "- %s [%s]: %.3f%%", reward.displayName, reward.rarity, chance * 100.0)), false));
+        return 1;
+    }
+
+    private static int giveKeyOffline(CommandSourceStack source, CrateConfigManager manager, String type, String uuidText, int amount) {
+        try {
+            UUID uuid = UUID.fromString(uuidText);
+            if (!PendingKeyService.queue(manager, uuid, type, amount)) throw new IllegalArgumentException();
+            source.sendSuccess(() -> Component.literal("Queued " + amount + " " + type + " key(s) for " + uuid + "."), true);
+            return 1;
+        } catch (IllegalArgumentException e) { source.sendFailure(Component.literal("Invalid UUID, key type, or amount.")); return 0; }
+    }
+
+    private static int duplicate(CommandSourceStack source, CrateConfigManager manager, String oldId, String newId) {
+        CrateDefinition crate = manager.duplicateCrate(oldId, newId);
+        if (crate == null) { source.sendFailure(Component.literal("Could not duplicate crate; check IDs.")); return 0; }
+        source.sendSuccess(() -> Component.literal("Duplicated " + oldId + " as " + crate.id + "."), true); return 1;
+    }
+
+    private static int rename(CommandSourceStack source, CrateConfigManager manager, String oldId, String newId) {
+        if (!manager.renameCrate(oldId, newId)) { source.sendFailure(Component.literal("Could not rename crate; check IDs.")); return 0; }
+        source.sendSuccess(() -> Component.literal("Renamed " + oldId + " to " + newId + "."), true); return 1;
+    }
+
+    private static int delete(CommandSourceStack source, CrateConfigManager manager, String type) {
+        if (manager.getLocations().locations.containsValue(type)) { source.sendFailure(Component.literal("Unconvert all placed " + type + " crates before deleting it.")); return 0; }
+        if (!manager.deleteCrate(type)) { source.sendFailure(Component.literal("Unknown crate type: " + type)); return 0; }
+        source.sendSuccess(() -> Component.literal("Deleted crate " + type + "."), true); return 1;
+    }
+
+    private static int exportCrate(CommandSourceStack source, CrateConfigManager manager, String type) {
+        var path = manager.exportCrate(type);
+        if (path == null) { source.sendFailure(Component.literal("Unknown crate type: " + type)); return 0; }
+        source.sendSuccess(() -> Component.literal("Exported to " + path), false); return 1;
+    }
+
+    private static int importCrate(CommandSourceStack source, CrateConfigManager manager, String file) {
+        CrateDefinition crate = manager.importCrate(file);
+        if (crate == null) { source.sendFailure(Component.literal("Import failed. Put a valid file in config/runeveilcrates/imports/.")); return 0; }
+        source.sendSuccess(() -> Component.literal("Imported crate " + crate.id + "."), true); return 1;
+    }
+
+    private static int setOverride(CommandSourceStack source, CrateConfigManager manager, String type, String setting, String value) {
+        CrateDefinition crate = manager.getCrate(type);
+        if (crate == null) { source.sendFailure(Component.literal("Unknown crate type: " + type)); return 0; }
+        boolean clear = "inherit".equalsIgnoreCase(value);
+        try {
+            switch (setting.toLowerCase(java.util.Locale.ROOT)) {
+                case "consumeKey" -> crate.consumeKeyOnOpen = clear ? null : Boolean.parseBoolean(value);
+                case "broadcastRare" -> crate.broadcastRareRewards = clear ? null : Boolean.parseBoolean(value);
+                case "animation" -> crate.rollAnimationEnabled = clear ? null : Boolean.parseBoolean(value);
+                case "pity" -> crate.pityPullsWithoutRarePlus = clear ? null : Math.max(1, Integer.parseInt(value));
+                case "inventory" -> crate.inventoryFullPolicy = value;
+                case "cooldown" -> crate.cooldownSeconds = clear ? -1 : Math.max(0, Integer.parseInt(value));
+                default -> { source.sendFailure(Component.literal("Settings: consumeKey, broadcastRare, animation, pity, inventory, cooldown")); return 0; }
+            }
+            manager.saveCrate(crate);
+            source.sendSuccess(() -> Component.literal("Set " + type + "." + setting + " to " + value + "."), true); return 1;
+        } catch (RuntimeException e) { source.sendFailure(Component.literal("Invalid override value: " + value)); return 0; }
     }
 }

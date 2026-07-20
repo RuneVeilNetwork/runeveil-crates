@@ -49,7 +49,7 @@ public final class CrateService {
     }
 
     public static boolean isAllowedBlock(CrateConfigManager configManager, BlockState state) {
-        String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+        String id = java.util.Objects.requireNonNull(net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(state.getBlock())).toString();
         return configManager.getSettings().allowedBlocks.stream()
                 .map(value -> value.toLowerCase(Locale.ROOT))
                 .anyMatch(value -> value.equals(id.toLowerCase(Locale.ROOT)));
@@ -72,7 +72,7 @@ public final class CrateService {
                 removed++;
                 continue;
             }
-            if (!level.hasChunkAt(pos)) {
+            if (!level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
                 continue;
             }
             if (!isAllowedBlock(configManager, level.getBlockState(pos))) {
@@ -167,7 +167,14 @@ public final class CrateService {
             return true;
         }
 
-        if (settings.consumeKeyOnOpen) {
+        if (!RewardService.canGrant(player, crate, reward, configManager)) {
+            player.sendSystemMessage(Component.literal("You need inventory space before opening this crate.")
+                    .withStyle(net.minecraft.ChatFormatting.RED));
+            return true;
+        }
+
+        boolean consumeKey = crate.consumeKeyOnOpen != null ? crate.consumeKeyOnOpen : settings.consumeKeyOnOpen;
+        if (consumeKey) {
             KeyService.consumeKey(player, keyStack.stack());
         }
 
@@ -214,6 +221,11 @@ public final class CrateService {
             return;
         }
         COOLDOWNS.put(new CooldownKey(playerId, CrateConfigManager.normalize(crateId)), System.currentTimeMillis() + seconds * 1000L);
+    }
+
+    public static void cleanupExpiredCooldowns() {
+        long now = System.currentTimeMillis();
+        COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= now);
     }
 
     private static Component message(SettingsConfig settings, String key) {

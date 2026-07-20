@@ -2,7 +2,7 @@ package com.runeveil.crates.util;
 
 import com.runeveil.crates.RuneveilCratesMod;
 import com.runeveil.crates.config.RewardEntry;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
@@ -22,7 +22,7 @@ public final class RewardItems {
 
     public static RewardEntry createRewardFromStack(ItemStack stack, String rarity, String idSuffix) {
         RewardEntry reward = new RewardEntry();
-        String baseId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().replace(':', '_');
+        String baseId = java.util.Objects.requireNonNull(ForgeRegistries.ITEMS.getKey(stack.getItem())).toString().replace(':', '_');
         reward.id = idSuffix == null || idSuffix.isBlank() ? baseId : baseId + "_" + idSuffix;
         captureFromStack(reward, stack);
         reward.weight = 10;
@@ -32,7 +32,7 @@ public final class RewardItems {
 
     private static void captureFromStack(RewardEntry reward, ItemStack stack) {
         reward.type = "item";
-        reward.item = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        reward.item = java.util.Objects.requireNonNull(ForgeRegistries.ITEMS.getKey(stack.getItem())).toString();
         reward.minCount = stack.getCount();
         reward.maxCount = stack.getCount();
         reward.displayName = stack.getHoverName().getString();
@@ -68,7 +68,7 @@ public final class RewardItems {
         if (itemId == null) {
             return ItemStack.EMPTY;
         }
-        Item item = BuiltInRegistries.ITEM.getOptional(itemId).orElse(null);
+        Item item = ForgeRegistries.ITEMS.getValue(itemId);
         if (item == null) {
             return ItemStack.EMPTY;
         }

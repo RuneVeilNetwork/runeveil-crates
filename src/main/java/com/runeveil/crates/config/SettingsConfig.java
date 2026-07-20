@@ -55,7 +55,8 @@ public class SettingsConfig {
     }
 
     public int editorPermissionLevel = 2;
-    public boolean allowOpenInClaims = true;
+    public int adminPermissionLevel = 2;
+    public String inventoryFullPolicy = "drop";
     public HologramSettings hologram = new HologramSettings();
     public RollAnimation rollAnimation = new RollAnimation();
     public RarityRollSettings rarityRoll = new RarityRollSettings();

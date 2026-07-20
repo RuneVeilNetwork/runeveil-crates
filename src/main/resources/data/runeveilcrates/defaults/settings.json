@@ -75,8 +75,10 @@
   # === Admin / editor settings ===
   # Minecraft permission level required to open the loot editor with empty hands on a crate. 0 = everyone, 2 = OP, 4 = server owner.
   "editorPermissionLevel": 2,
-  # Reserved for claim-mod compatibility. Claim setup instructions are in claim-compat.txt.
-  "allowOpenInClaims": true,
+  # Minecraft permission level required for all /crate administration commands.
+  "adminPermissionLevel": 2,
+  # What to do with item rewards when inventory is full: drop, deny, or discard.
+  "inventoryFullPolicy": "drop",
   # === Floating crate labels ===
   "hologram": {
     # How many blocks above the crate the floating name appears. Increase if the label sits inside the block model.

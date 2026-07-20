@@ -59,6 +59,7 @@ public class RuneveilCratesMod {
         }
         if (configManager != null) {
             configManager.saveLocations();
+            configManager.flushDirtyData();
         }
     }
 

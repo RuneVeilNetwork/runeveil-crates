@@ -24,7 +24,8 @@ public final class CrateRollAnimation {
     public static void start(ServerLevel level, BlockPos pos, CrateDefinition crate, RewardEntry winner,
                              ServerPlayer player, CrateConfigManager manager, Runnable onComplete) {
         SettingsConfig.RollAnimation settings = manager.getSettings().rollAnimation;
-        if (settings == null || !settings.enabled || crate.rewards == null || crate.rewards.isEmpty()) {
+        boolean enabled = crate.rollAnimationEnabled != null ? crate.rollAnimationEnabled : settings != null && settings.enabled;
+        if (settings == null || !enabled || crate.rewards == null || crate.rewards.isEmpty()) {
             CrateHologramManager.showCrateLabel(level, pos, crate, manager.getSettings());
             onComplete.run();
             return;

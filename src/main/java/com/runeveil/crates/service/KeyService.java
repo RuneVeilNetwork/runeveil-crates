@@ -4,7 +4,7 @@ import com.runeveil.crates.RuneveilCrates;
 import com.runeveil.crates.config.CrateConfigManager;
 import com.runeveil.crates.config.KeyConfig;
 import com.runeveil.crates.util.MessageUtil;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -31,7 +31,7 @@ public final class KeyService {
         }
 
         ResourceLocation itemId = parseLocation(keyConfig.item);
-        Item item = itemId == null ? Items.TRIPWIRE_HOOK : BuiltInRegistries.ITEM.getOptional(itemId).orElse(Items.TRIPWIRE_HOOK);
+        Item item = itemId == null ? Items.TRIPWIRE_HOOK : java.util.Optional.ofNullable(ForgeRegistries.ITEMS.getValue(itemId)).orElse(Items.TRIPWIRE_HOOK);
         ItemStack stack = new ItemStack(item, Math.max(1, count));
         CompoundTag tag = stack.getOrCreateTag();
         tag.putString(RuneveilCrates.KEY_TAG, CrateConfigManager.normalize(keyConfig.id));

@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 
 public final class VotifierIntegration {
     private static final String UBERSWE_MOD_ID = "votifier";
+    private static Object hookedStorage;
 
     private VotifierIntegration() {
     }
@@ -106,8 +107,11 @@ public final class VotifierIntegration {
             if (voteStorage == null) {
                 return false;
             }
+            if (voteStorage == hookedStorage) return true;
 
+            Consumer<Object> existing = readExistingCallback(voteStorage);
             Consumer<Object> replacement = vote -> {
+                if (existing != null) existing.accept(vote);
                 String username = readVoteUsername(vote);
                 if (username == null || username.isBlank()) {
                     return;
@@ -117,6 +121,7 @@ public final class VotifierIntegration {
 
             Method setCallback = voteStorage.getClass().getMethod("setVoteCallback", Consumer.class);
             setCallback.invoke(voteStorage, replacement);
+            hookedStorage = voteStorage;
             return true;
         } catch (ReflectiveOperationException e) {
             RuneveilCratesMod.LOGGER.warn("Failed to hook uberswe Votifier", e);
@@ -132,8 +137,8 @@ public final class VotifierIntegration {
 
         ServerPlayer player = server.getPlayerList().getPlayerByName(username);
         if (player != null) {
-            VoteRewardService.grantKeys(player, configManager, settings, 1);
-            clearUberswePendingVotes(username);
+            int pendingVotes = drainUberswePendingVotes(username);
+            VoteRewardService.grantKeys(player, configManager, settings, Math.max(1, pendingVotes));
             return;
         }
 
@@ -146,17 +151,32 @@ public final class VotifierIntegration {
         }
     }
 
-    private static void clearUberswePendingVotes(String playerName) {
+    private static int drainUberswePendingVotes(String playerName) {
         try {
             Object voteStorage = resolveUbersweVoteStorage();
             if (voteStorage == null) {
-                return;
+                return 0;
             }
             Method getAndRemove = voteStorage.getClass().getMethod("getAndRemoveVotes", String.class);
-            getAndRemove.invoke(voteStorage, playerName);
+            Object value = getAndRemove.invoke(voteStorage, playerName);
+            return value instanceof List<?> votes ? votes.size() : 0;
         } catch (ReflectiveOperationException e) {
             RuneveilCratesMod.LOGGER.warn("Failed to clear pending uberswe votes for {}", playerName, e);
+            return 0;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Consumer<Object> readExistingCallback(Object voteStorage) {
+        for (String name : List.of("voteCallback", "callback")) {
+            try {
+                Field field = voteStorage.getClass().getDeclaredField(name);
+                field.setAccessible(true);
+                Object value = field.get(voteStorage);
+                if (value instanceof Consumer<?> consumer) return (Consumer<Object>) consumer;
+            } catch (ReflectiveOperationException ignored) { }
+        }
+        return null;
     }
 
     private static Object resolveUbersweVoteStorage() throws ReflectiveOperationException {

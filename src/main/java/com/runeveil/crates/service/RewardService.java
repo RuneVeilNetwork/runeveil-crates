@@ -4,6 +4,7 @@ import com.runeveil.crates.config.CrateConfigManager;
 import com.runeveil.crates.config.CrateDefinition;
 import com.runeveil.crates.config.RewardEntry;
 import com.runeveil.crates.config.SettingsConfig;
+import com.runeveil.crates.config.ConfigValidator;
 import com.runeveil.crates.util.MessageUtil;
 import com.runeveil.crates.util.RarityDefinitions;
 import com.runeveil.crates.util.RewardItems;
@@ -58,13 +59,15 @@ public final class RewardService {
             ItemStack stack = RewardItems.createStack(reward);
             if (!stack.isEmpty()) {
                 if (!player.getInventory().add(stack)) {
-                    player.drop(stack, false);
+                    String policy = inventoryPolicy(crate, configManager.getSettings());
+                    if ("drop".equals(policy)) player.drop(stack, false);
                 }
             }
         }
 
         SettingsConfig settings = configManager.getSettings();
-        if (reward.broadcast || (settings.broadcastRareRewards && RarityDefinitions.isRareOrHigher(reward.rarity))) {
+        boolean broadcastRare = crate.broadcastRareRewards != null ? crate.broadcastRareRewards : settings.broadcastRareRewards;
+        if (reward.broadcast || (broadcastRare && RarityDefinitions.isRareOrHigher(reward.rarity))) {
             String rewardName = resolveRewardName(reward);
             String template = settings.messages.getOrDefault("rewardBroadcast", "&6{player} &ewon &b{reward} &efrom a &d{crate}&e!");
             player.getServer().getPlayerList().broadcastSystemMessage(
@@ -72,6 +75,27 @@ public final class RewardService {
                     false
             );
         }
+    }
+
+    public static boolean canGrant(ServerPlayer player, CrateDefinition crate, RewardEntry reward, CrateConfigManager manager) {
+        if (reward == null || "command".equalsIgnoreCase(reward.type)) return true;
+        if (!"deny".equals(inventoryPolicy(crate, manager.getSettings()))) return true;
+        ItemStack wanted = RewardItems.previewStack(reward).copy();
+        wanted.setCount(Math.max(1, reward.maxCount));
+        if (wanted.isEmpty()) return true;
+        int remaining = wanted.getCount();
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack existing = player.getInventory().getItem(slot);
+            if (existing.isEmpty()) return true;
+            if (ItemStack.isSameItemSameTags(existing, wanted)) remaining -= Math.max(0, existing.getMaxStackSize() - existing.getCount());
+            if (remaining <= 0) return true;
+        }
+        return false;
+    }
+
+    private static String inventoryPolicy(CrateDefinition crate, SettingsConfig settings) {
+        String perCrate = ConfigValidator.normalizePolicy(crate.inventoryFullPolicy);
+        return "inherit".equals(perCrate) ? ConfigValidator.normalizePolicy(settings.inventoryFullPolicy) : perCrate;
     }
 
     private static String rollRarity(CrateDefinition crate, SettingsConfig settings, boolean forcePity) {

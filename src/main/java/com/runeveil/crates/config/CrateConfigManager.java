@@ -12,6 +12,7 @@ import com.runeveil.crates.RuneveilCrates;
 import com.runeveil.crates.RuneveilCratesMod;
 import com.runeveil.crates.storage.CrateLocationStorage;
 import com.runeveil.crates.storage.PlayerPityStorage;
+import com.runeveil.crates.storage.PendingKeyStorage;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -30,6 +31,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,12 +50,16 @@ public class CrateConfigManager {
     private final Path settingsFile;
     private final Path locationsFile;
     private final Path pityFile;
+    private final Path pendingKeysFile;
 
     private SettingsConfig settings = new SettingsConfig();
     private final Map<String, KeyConfig> keys = new LinkedHashMap<>();
     private final Map<String, CrateDefinition> crates = new LinkedHashMap<>();
     private CrateLocationStorage locations = new CrateLocationStorage();
     private PlayerPityStorage pityStorage = new PlayerPityStorage();
+    private PendingKeyStorage pendingKeys = new PendingKeyStorage();
+    private List<String> validationErrors = List.of();
+    private boolean pityDirty;
 
     public CrateConfigManager(MinecraftServer server) {
         this.server = server;
@@ -63,6 +69,7 @@ public class CrateConfigManager {
         this.settingsFile = configDir.resolve("settings.json");
         this.locationsFile = configDir.resolve("locations.json");
         this.pityFile = configDir.resolve("player-pity.json");
+        this.pendingKeysFile = configDir.resolve("pending-keys.json");
     }
 
     public void load() {
@@ -87,16 +94,28 @@ public class CrateConfigManager {
             migrateLegacyDirectory(keysDir);
             migrateLegacyDirectory(cratesDir);
 
-            settings = readJson(settingsFile, SettingsConfig.class, new SettingsConfig());
-            locations = readJson(locationsFile, CrateLocationStorage.class, new CrateLocationStorage());
-            pityStorage = readJson(pityFile, PlayerPityStorage.class, new PlayerPityStorage());
-
-            keys.clear();
-            loadDirectory(keysDir, KeyConfig.class, keys);
-
-            crates.clear();
-            loadDirectory(cratesDir, CrateDefinition.class, crates);
-        } catch (IOException e) {
+            SettingsConfig candidateSettings = readJsonStrict(settingsFile, SettingsConfig.class);
+            CrateLocationStorage candidateLocations = readJsonStrict(locationsFile, CrateLocationStorage.class);
+            PlayerPityStorage candidatePity = Files.exists(pityFile) ? readJsonStrict(pityFile, PlayerPityStorage.class) : new PlayerPityStorage();
+            PendingKeyStorage candidatePending = Files.exists(pendingKeysFile) ? readJsonStrict(pendingKeysFile, PendingKeyStorage.class) : new PendingKeyStorage();
+            Map<String, KeyConfig> candidateKeys = new LinkedHashMap<>();
+            Map<String, CrateDefinition> candidateCrates = new LinkedHashMap<>();
+            loadDirectoryStrict(keysDir, KeyConfig.class, candidateKeys);
+            loadDirectoryStrict(cratesDir, CrateDefinition.class, candidateCrates);
+            List<String> errors = ConfigValidator.validate(candidateSettings, candidateKeys, candidateCrates);
+            validationErrors = List.copyOf(errors);
+            if (!errors.isEmpty()) {
+                RuneveilCratesMod.LOGGER.error("Rejected crate configuration reload with {} error(s): {}", errors.size(), String.join("; ", errors));
+                return;
+            }
+            settings = candidateSettings;
+            locations = candidateLocations;
+            pityStorage = candidatePity;
+            pendingKeys = candidatePending;
+            keys.clear(); keys.putAll(candidateKeys);
+            crates.clear(); crates.putAll(candidateCrates);
+        } catch (Exception e) {
+            validationErrors = List.of(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             RuneveilCratesMod.LOGGER.error("Failed to load crate configuration", e);
         }
     }
@@ -126,8 +145,16 @@ public class CrateConfigManager {
     }
 
     public void savePityStorage() {
+        pityDirty = false;
         writeJson(pityFile, pityStorage);
     }
+
+    public void markPityDirty() { pityDirty = true; }
+    public void flushDirtyData() { if (pityDirty) savePityStorage(); savePendingKeys(); }
+    public PendingKeyStorage getPendingKeys() { return pendingKeys; }
+    public void savePendingKeys() { writeJson(pendingKeysFile, pendingKeys); }
+    public List<String> getValidationErrors() { return validationErrors; }
+    public List<String> validateCurrent() { return ConfigValidator.validate(settings, keys, crates); }
 
     public SettingsConfig getSettings() {
         return settings;
@@ -180,6 +207,62 @@ public class CrateConfigManager {
 
     public Map<String, CrateDefinition> getCrates() {
         return Collections.unmodifiableMap(crates);
+    }
+
+    public boolean deleteCrate(String id) {
+        String key = normalize(id);
+        CrateDefinition removed = crates.remove(key);
+        if (removed == null) return false;
+        try { Files.deleteIfExists(cratesDir.resolve(key + ".json")); return true; }
+        catch (IOException e) { crates.put(key, removed); RuneveilCratesMod.LOGGER.error("Failed to delete crate {}", id, e); return false; }
+    }
+
+    public CrateDefinition duplicateCrate(String sourceId, String newId) {
+        CrateDefinition source = getCrate(sourceId);
+        String key = normalize(newId);
+        if (source == null || key.isBlank() || crates.containsKey(key)) return null;
+        CrateDefinition copy = GSON.fromJson(GSON.toJson(source), CrateDefinition.class);
+        copy.id = key;
+        copy.displayName = source.displayName + " Copy";
+        saveCrate(copy);
+        return copy;
+    }
+
+    public boolean renameCrate(String oldId, String newId) {
+        String oldKey = normalize(oldId), newKey = normalize(newId);
+        CrateDefinition crate = crates.get(oldKey);
+        if (crate == null || newKey.isBlank() || crates.containsKey(newKey)) return false;
+        try {
+            Files.deleteIfExists(cratesDir.resolve(oldKey + ".json"));
+            crates.remove(oldKey);
+            crate.id = newKey;
+            saveCrate(crate);
+            locations.locations.replaceAll((location, value) -> normalize(value).equals(oldKey) ? newKey : value);
+            saveLocations();
+            return true;
+        } catch (Exception e) { RuneveilCratesMod.LOGGER.error("Failed to rename crate {}", oldId, e); return false; }
+    }
+
+    public Path exportCrate(String id) {
+        CrateDefinition crate = getCrate(id);
+        if (crate == null) return null;
+        Path target = configDir.resolve("exports").resolve(normalize(id) + ".json");
+        writeJson(target, crate);
+        return target;
+    }
+
+    public CrateDefinition importCrate(String fileName) {
+        Path imports = configDir.resolve("imports").toAbsolutePath().normalize();
+        Path source = imports.resolve(fileName).normalize();
+        if (!source.startsWith(imports) || !source.getFileName().toString().endsWith(".json")) return null;
+        try {
+            CrateDefinition crate = readJsonStrict(source, CrateDefinition.class);
+            Map<String, CrateDefinition> candidate = new LinkedHashMap<>(crates);
+            candidate.put(normalize(crate.id), crate);
+            if (!ConfigValidator.validate(settings, keys, candidate).isEmpty()) return null;
+            saveCrate(crate);
+            return crate;
+        } catch (Exception e) { RuneveilCratesMod.LOGGER.error("Failed to import crate from {}", source, e); return null; }
     }
 
     public CrateLocationStorage getLocations() {
@@ -238,6 +321,21 @@ public class CrateConfigManager {
                 }
                 target.put(normalize(id), value);
             });
+        }
+    }
+
+    private static <T> void loadDirectoryStrict(Path dir, Class<T> type, Map<String, T> target) throws IOException {
+        if (!Files.isDirectory(dir)) return;
+        try (Stream<Path> files = Files.list(dir)) {
+            for (Path path : files.filter(p -> p.toString().endsWith(".json")).toList()) {
+                T value = readJsonStrict(path, type);
+                String id = path.getFileName().toString().replace(".json", "");
+                if (value instanceof KeyConfig key && key.id != null && !key.id.isBlank()) id = key.id;
+                if (value instanceof CrateDefinition crate && crate.id != null && !crate.id.isBlank()) id = crate.id;
+                String normalized = normalize(id);
+                if (target.containsKey(normalized)) throw new IOException("Duplicate configured id: " + normalized);
+                target.put(normalized, value);
+            }
         }
     }
 
@@ -369,11 +467,30 @@ public class CrateConfigManager {
         }
     }
 
+    private static <T> T readJsonStrict(Path path, Class<T> type) throws IOException {
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            JsonReader jsonReader = new JsonReader(reader);
+            jsonReader.setLenient(true);
+            T value = GSON.fromJson(jsonReader, type);
+            if (value == null) throw new IOException("Empty configuration: " + path);
+            return value;
+        } catch (JsonSyntaxException e) {
+            throw new IOException("Invalid JSON in " + path + ": " + e.getMessage(), e);
+        }
+    }
+
     private static void writeJson(Path path, Object value) {
         try {
             Files.createDirectories(path.getParent());
-            try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+            Path temp = path.resolveSibling(path.getFileName() + ".tmp");
+            try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8)) {
                 GSON.toJson(value, writer);
+            }
+            if (Files.exists(path)) Files.copy(path, path.resolveSibling(path.getFileName() + ".bak"), StandardCopyOption.REPLACE_EXISTING);
+            try {
+                Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException e) {
             RuneveilCratesMod.LOGGER.error("Failed to write {}", path, e);
