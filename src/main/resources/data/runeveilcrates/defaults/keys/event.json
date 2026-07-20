@@ -1,0 +1,17 @@
+{
+  # Event key definition. One file per key type in config/runeveilcrates/keys/
+  # After editing, run: /crate reload
+  # Internal key ID. Must match a crate's requiredKey and the /crate givekey command name.
+  "id": "event",
+  # Item name shown in inventory. Supports & color codes.
+  "displayName": "&6Event Key",
+  # Extra lines shown under the item name when hovering in inventory.
+  "lore": [
+    "&7Use on an Event Crate",
+    "&7Earned from server events"
+  ],
+  # Vanilla or modded item used as the key.
+  "item": "minecraft:blaze_rod",
+  # If true, the key item has an enchantment glint effect.
+  "glow": true
+}

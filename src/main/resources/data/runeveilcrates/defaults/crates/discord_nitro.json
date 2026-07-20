@@ -1,0 +1,70 @@
+{
+  # Discord Nitro crate loot table. Edit this file or use /crate edit in game.
+  # After editing, run: /crate reload
+  # Internal crate ID used by /crate convert discord_nitro.
+  "id": "discord_nitro",
+  # Friendly name shown in holograms, messages, and the loot editor.
+  "displayName": "Discord Nitro Crate",
+  # Key ID from config/runeveilcrates/keys/ required to open this crate.
+  "requiredKey": "discord_nitro",
+  # Use -1 for the global cooldown from settings.json, or set a crate-specific value.
+  "cooldownSeconds": 0,
+  # Rarity is rolled first. Weight only affects rewards within the same rarity.
+  "rewards": [
+    {
+      "id": "nitro_amethyst",
+      "type": "item",
+      "item": "minecraft:amethyst_shard",
+      "minCount": 16,
+      "maxCount": 32,
+      "weight": 45,
+      "rarity": "common",
+      "broadcast": false,
+      "displayName": "Amethyst Shards"
+    },
+    {
+      "id": "nitro_experience",
+      "type": "item",
+      "item": "minecraft:experience_bottle",
+      "minCount": 16,
+      "maxCount": 32,
+      "weight": 35,
+      "rarity": "uncommon",
+      "broadcast": false,
+      "displayName": "Experience Bottles"
+    },
+    {
+      "id": "nitro_diamonds",
+      "type": "item",
+      "item": "minecraft:diamond",
+      "minCount": 4,
+      "maxCount": 8,
+      "weight": 20,
+      "rarity": "rare",
+      "broadcast": true,
+      "displayName": "Diamonds"
+    },
+    {
+      "id": "nitro_netherite",
+      "type": "item",
+      "item": "minecraft:netherite_ingot",
+      "minCount": 1,
+      "maxCount": 2,
+      "weight": 8,
+      "rarity": "epic",
+      "broadcast": true,
+      "displayName": "Netherite Ingots"
+    },
+    {
+      "id": "nitro_star",
+      "type": "item",
+      "item": "minecraft:nether_star",
+      "minCount": 1,
+      "maxCount": 1,
+      "weight": 2,
+      "rarity": "legendary",
+      "broadcast": true,
+      "displayName": "Nether Star"
+    }
+  ]
+}

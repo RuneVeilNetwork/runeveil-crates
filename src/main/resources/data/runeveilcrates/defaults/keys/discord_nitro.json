@@ -1,0 +1,17 @@
+{
+  # Discord Nitro key definition. One file per key type in config/runeveilcrates/keys/
+  # After editing, run: /crate reload
+  # Internal key ID. Must match the Discord Nitro crate's requiredKey.
+  "id": "discord_nitro",
+  # Item name shown in inventory. Supports & color codes.
+  "displayName": "&dDiscord Nitro Key",
+  # Extra lines shown under the item name when hovering in inventory.
+  "lore": [
+    "&7Use on a Discord Nitro Crate",
+    "&7A reward for supporting the Discord community"
+  ],
+  # Vanilla or modded item used as the key.
+  "item": "minecraft:amethyst_shard",
+  # If true, the key item has an enchantment glint effect.
+  "glow": true
+}

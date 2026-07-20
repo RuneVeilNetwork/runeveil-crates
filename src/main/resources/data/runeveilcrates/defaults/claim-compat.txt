@@ -1,0 +1,38 @@
+# Claim mod compatibility for RuneVeil Crates
+#
+# This file explains how to let players open crates inside protected claims.
+# You do NOT need to edit this file for the mod to work — follow the steps below.
+#
+# After any claim-mod config changes, restart the server.
+#
+# =============================================================================
+# FTB Chunks
+# =============================================================================
+#
+# This mod ships block tags automatically under ftbchunks:interact_whitelist.
+# In most cases, no extra setup is needed. Just install both mods and restart.
+#
+# =============================================================================
+# Open Parties and Claims (OpenPAC)
+# =============================================================================
+#
+# 1. Open: serverconfig/openpartiesandclaims-server.toml
+# 2. Find: forcedBlockProtectionExceptionList
+# 3. Add these lines inside the list (keep your existing entries):
+#
+#   "anything$minecraft:chest",
+#   "anything$minecraft:trapped_chest",
+#   "anything$minecraft:barrel",
+#   "anything$#runeveilcrates:crate_blocks"
+#
+# The "anything$" prefix lets players interact while holding keys or an empty hand.
+#
+# 4. Save the file and restart the server.
+#
+# =============================================================================
+# Troubleshooting
+# =============================================================================
+#
+# - Player can't click a crate in a claim → check your claim mod's interact rules
+# - Player can't open with a key → make sure they have the correct key type
+# - Admin wants to edit loot in a claim → raise editorPermissionLevel in settings.json

@@ -1,0 +1,13 @@
+{
+  # AUTO-MANAGED FILE — stores which blocks in the world are crates.
+  # You usually do NOT need to edit this by hand.
+  # 
+  # Use these commands instead:
+  #   /crate convert <type>  — bind the block you are looking at
+  #   /crate unconvert       — remove a crate binding
+  # 
+  # This file is updated automatically when crates are converted or unconverted.
+  # Maps world positions to crate types. Format is managed by the mod.
+  "locations": {
+  }
+}

@@ -1,0 +1,71 @@
+{
+  # Event crate loot table. One file per crate type in config/runeveilcrates/crates/
+  # Edit rewards here OR use the in-game editor: look at an event crate and run /crate edit
+  # After editing, run: /crate reload
+  # 
+  # This file includes a command reward example (event_command).
+  # Internal crate ID. Used by /crate convert event and must match the file name.
+  "id": "event",
+  # Friendly name shown in holograms, messages, and the loot editor.
+  "displayName": "Event Crate",
+  # Key ID from config/runeveilcrates/keys/ that opens this crate.
+  "requiredKey": "event",
+  # Per-crate open cooldown. Use -1 to fall back to openCooldownSeconds in settings.json.
+  "cooldownSeconds": 0,
+  # id: Unique name for this reward entry.
+  # type: item or command
+  # item: Item ID for item rewards.
+  # minCount: Minimum amount rolled.
+  # maxCount: Maximum amount rolled.
+  # weight: Chance weight within the same rarity tier. Higher = more common inside that tier.
+  # rarity: common, uncommon, rare, epic, or legendary. Tier odds are set in settings.json.
+  # broadcast: Announce this reward to the whole server when won.
+  # displayName: Name shown in holograms and broadcasts.
+  # commands: For command rewards. Use {player} for the opener's name.
+  "rewards": [
+    {
+      "id": "fireworks",
+      "type": "item",
+      "item": "minecraft:firework_rocket",
+      "minCount": 8,
+      "maxCount": 16,
+      "weight": 30,
+      "rarity": "common",
+      "broadcast": false,
+      "displayName": "Fireworks"
+    },
+    {
+      "id": "totem",
+      "type": "item",
+      "item": "minecraft:totem_of_undying",
+      "minCount": 1,
+      "maxCount": 1,
+      "weight": 5,
+      "rarity": "legendary",
+      "broadcast": true,
+      "displayName": "Totem of Undying"
+    },
+    {
+      "id": "event_command",
+      "type": "command",
+      "weight": 10,
+      "rarity": "epic",
+      "broadcast": true,
+      "displayName": "Event Bonus",
+      "commands": [
+        "give {player} minecraft:emerald 16"
+      ]
+    },
+    {
+      "id": "cake",
+      "type": "item",
+      "item": "minecraft:cake",
+      "minCount": 1,
+      "maxCount": 2,
+      "weight": 55,
+      "rarity": "common",
+      "broadcast": false,
+      "displayName": "Cake"
+    }
+  ]
+}

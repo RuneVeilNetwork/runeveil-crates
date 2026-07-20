@@ -1,0 +1,71 @@
+{
+  # Vote crate loot table. One file per crate type in config/runeveilcrates/crates/
+  # Edit rewards here OR use the in-game editor: look at a vote crate and run /crate edit
+  # After editing, run: /crate reload
+  # 
+  # Tip: rarity tier odds are set in settings.json. Weight only affects chance within that rarity tab.
+  # Internal crate ID. Used by /crate convert vote and must match the file name.
+  "id": "vote",
+  # Friendly name shown in holograms, messages, and the loot editor.
+  "displayName": "Vote Crate",
+  # Key ID from config/runeveilcrates/keys/ that opens this crate.
+  "requiredKey": "vote",
+  # Per-crate open cooldown for this crate type. Use -1 to fall back to openCooldownSeconds in settings.json.
+  "cooldownSeconds": 0,
+  # id: Unique name for this reward entry (any text, used internally).
+  # type: item = give an item. command = run console commands.
+  # item: Item ID for type item (example: minecraft:diamond).
+  # minCount: Minimum stack size rolled for item rewards.
+  # maxCount: Maximum stack size rolled for item rewards.
+  # weight: Chance weight within the same rarity tier. Higher = more common inside that tier.
+  # rarity: common, uncommon, rare, epic, or legendary. Tier odds are set in settings.json.
+  # broadcast: If true, always announce this reward to the server when won.
+  # displayName: Name shown in holograms and broadcast messages.
+  # commands: For type command only. Console commands to run. Use {player} for the opener's name.
+  "rewards": [
+    {
+      "id": "golden_apple",
+      "type": "item",
+      "item": "minecraft:golden_apple",
+      "minCount": 1,
+      "maxCount": 2,
+      "weight": 40,
+      "rarity": "common",
+      "broadcast": false,
+      "displayName": "Golden Apples"
+    },
+    {
+      "id": "experience",
+      "type": "item",
+      "item": "minecraft:experience_bottle",
+      "minCount": 4,
+      "maxCount": 8,
+      "weight": 35,
+      "rarity": "common",
+      "broadcast": false,
+      "displayName": "Experience Bottles"
+    },
+    {
+      "id": "diamonds",
+      "type": "item",
+      "item": "minecraft:diamond",
+      "minCount": 1,
+      "maxCount": 3,
+      "weight": 15,
+      "rarity": "rare",
+      "broadcast": true,
+      "displayName": "Diamonds"
+    },
+    {
+      "id": "emeralds",
+      "type": "item",
+      "item": "minecraft:emerald",
+      "minCount": 2,
+      "maxCount": 6,
+      "weight": 10,
+      "rarity": "rare",
+      "broadcast": false,
+      "displayName": "Emeralds"
+    }
+  ]
+}

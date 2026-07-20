@@ -1,0 +1,132 @@
+{
+  # RuneVeil Crates — main settings file
+  # Lines starting with # are comments and can be edited or removed safely.
+  # After editing, run: /crate reload
+  # 
+  # Quick start:
+  #   1. Look at a chest/barrel/shulker and run: /crate convert vote
+  #   2. Give a player a key: /crate givekey vote Steve
+  #   3. Right-click the crate with the matching key to roll loot
+  # 
+  # Chat colors in messages use & codes (example: &a = green, &c = red, &e = yellow)
+  # === General crate behavior ===
+  # If true, one key is removed from the player's inventory each time they open a crate.
+  "consumeKeyOnOpen": true,
+  # Minimum seconds between crate opens for the same player. Use 0 for no cooldown.
+  "openCooldownSeconds": 0,
+  # If true, rare+ rewards (rare, epic, legendary) are announced to the whole server even when the reward entry has broadcast set to false.
+  "broadcastRareRewards": true,
+  # How many blocks away a player can stand and still use /crate convert, /crate unconvert, or /crate edit.
+  "maxLookDistance": 6,
+  # Block IDs that can be turned into crates with /crate convert. Must include the namespace (minecraft:chest).
+  "allowedBlocks": [
+    "minecraft:chest",
+    "minecraft:trapped_chest",
+    "minecraft:barrel",
+    "minecraft:shulker_box",
+    "minecraft:white_shulker_box",
+    "minecraft:orange_shulker_box",
+    "minecraft:magenta_shulker_box",
+    "minecraft:light_blue_shulker_box",
+    "minecraft:yellow_shulker_box",
+    "minecraft:lime_shulker_box",
+    "minecraft:pink_shulker_box",
+    "minecraft:gray_shulker_box",
+    "minecraft:light_gray_shulker_box",
+    "minecraft:cyan_shulker_box",
+    "minecraft:purple_shulker_box",
+    "minecraft:blue_shulker_box",
+    "minecraft:brown_shulker_box",
+    "minecraft:green_shulker_box",
+    "minecraft:red_shulker_box",
+    "minecraft:black_shulker_box"
+  ],
+  # === Chat messages ===
+  # needKey: Shown when a player clicks a crate without the correct key. Placeholders: {key}
+  # wrongKey: Shown when the player uses a key that does not match this crate type.
+  # opened: Shown to the player after opening a crate. Placeholders: {crate}
+  # converted: Shown after /crate convert. Placeholders: {crate}
+  # unconverted: Shown after /crate unconvert removes a crate binding.
+  # notCrateBlock: Shown when /crate convert is used while not looking at an allowed block.
+  # alreadyCrate: Shown when /crate convert is used on a block that is already a crate.
+  # notCrate: Shown when /crate unconvert is used on a block that is not a crate.
+  # cooldown: Shown when a player opens crates too quickly. Placeholders: {seconds}
+  # rewardBroadcast: Server-wide message for big wins. Placeholders: {player}, {reward}, {crate}
+  # giveKey: Shown after /crate givekey. Placeholders: {amount}, {key}, {player}
+  # editorOpened: Shown when an admin opens the in-game loot editor. Placeholders: {crate}
+  # editorNoPermission: Shown when a player tries to open a crate without a key or permission.
+  # voteReward: Sent to a player when they receive vote keys. Placeholders: {amount}, {key}, {player}
+  "messages": {
+    "needKey": "&cYou need a &e{key}&c to open this crate.",
+    "wrongKey": "&cThat key does not work on this crate.",
+    "opened": "&aYou opened the &e{crate}&a crate!",
+    "converted": "&aConverted block to &e{crate}&a crate.",
+    "unconverted": "&eRemoved crate binding from this block.",
+    "notCrateBlock": "&cYou must look at a chest, barrel, or shulker box.",
+    "alreadyCrate": "&cThis block is already a crate.",
+    "notCrate": "&cThis block is not registered as a crate.",
+    "cooldown": "&cPlease wait &e{seconds}s &cbefore opening another crate.",
+    "rewardBroadcast": "&6{player} &ewon &b{reward} &efrom a &d{crate}&e!",
+    "giveKey": "&aGave &6{amount} &r{key}&a to &e{player}&a.",
+    "editorOpened": "&aOpened loot table editor for &e{crate}&a.",
+    "editorNoPermission": "&cUse a crate key to open this crate.",
+    "voteReward": "&aThanks for voting! You received &6{amount} &r{key}&a."
+  },
+  # === Admin / editor settings ===
+  # Minecraft permission level required to open the loot editor with empty hands on a crate. 0 = everyone, 2 = OP, 4 = server owner.
+  "editorPermissionLevel": 2,
+  # Reserved for claim-mod compatibility. Claim setup instructions are in claim-compat.txt.
+  "allowOpenInClaims": true,
+  # === Floating crate labels ===
+  "hologram": {
+    # How many blocks above the crate the floating name appears. Increase if the label sits inside the block model.
+    "yOffset": 1.35,
+    # If true, all crate holograms are deleted when the server stops. Recommended: true (labels are recreated on startup).
+    "removeOnShutdown": true,
+    # If true, removes leftover holograms that are not tied to a registered crate on server start.
+    "removeOrphansOnStartup": true
+  },
+  # === Reward roll animation ===
+  "rollAnimation": {
+    # If true, the hologram cycles through loot table items before landing on the winner.
+    "enabled": true,
+    # How long each preview item stays on screen during the roll (20 ticks = 1 second).
+    "ticksPerStep": 2,
+    # Minimum number of preview items shown before the winning reward is revealed.
+    "minimumSteps": 24,
+    # How long the winning reward name stays visible before the hologram returns to the crate label.
+    "finalHoldTicks": 20
+  },
+  # === Rarity tier odds ===
+  "rarityRoll": {
+    # Percent chance to roll each rarity tier first. Only tiers with rewards in the crate can win. Weights on individual rewards only matter inside that tier.
+    "odds": {
+      "common": 45,
+      "uncommon": 30,
+      "rare": 15,
+      "epic": 8,
+      "legendary": 2
+    }
+  },
+  # === Pity system ===
+  "pity": {
+    # If true, players are guaranteed a rare-or-higher reward after too many pulls without one.
+    "enabled": true,
+    # Number of consecutive opens on the same crate without rare/epic/legendary before the next open is guaranteed rare+.
+    "pullsWithoutRarePlus": 20
+  },
+  # === Vote rewards (requires uberswe/votifier mod) ===
+  "votifier": {
+    # If true, automatically give vote keys when players vote through a compatible Votifier mod.
+    "enabled": true,
+    # Which key from config/runeveilcrates/keys/ to give (usually vote).
+    "voteKeyId": "vote",
+    # How many keys to give each time a player votes.
+    "keysPerVote": 1,
+    # If true, logs a console message when an offline player votes (keys are stored until they join).
+    "logOfflineVotes": true,
+    # Extra console commands run on each vote. Use {player} for the voter's name.
+    # Example: give {player} minecraft:cookie 1
+    "extraVoteCommands": []
+  }
+}

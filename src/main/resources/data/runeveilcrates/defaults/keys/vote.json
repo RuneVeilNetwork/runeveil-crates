@@ -1,0 +1,18 @@
+{
+  # Vote key definition. One file per key type in config/runeveilcrates/keys/
+  # After editing, run: /crate reload
+  # The file name should match the id field (vote.json -> id: vote)
+  # Internal key ID. Must match a crate's requiredKey and the /crate givekey command name.
+  "id": "vote",
+  # Item name shown in inventory. Supports & color codes.
+  "displayName": "&aVote Key",
+  # Extra lines shown under the item name when hovering in inventory.
+  "lore": [
+    "&7Use on a Vote Crate",
+    "&7Earned from voting for the server"
+  ],
+  # Vanilla or modded item used as the key.
+  "item": "minecraft:tripwire_hook",
+  # If true, the key item has an enchantment glint effect.
+  "glow": true
+}

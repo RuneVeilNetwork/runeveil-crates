@@ -1,0 +1,82 @@
+{
+  # Donor crate loot table. One file per crate type in config/runeveilcrates/crates/
+  # Edit rewards here OR use the in-game editor: look at a donor crate and run /crate edit
+  # After editing, run: /crate reload
+  # 
+  # Tip: rarity tier odds are set in settings.json. Weight only affects chance within that rarity tab.
+  # Internal crate ID. Used by /crate convert donor and must match the file name.
+  "id": "donor",
+  # Friendly name shown in holograms, messages, and the loot editor.
+  "displayName": "Donor Crate",
+  # Key ID from config/runeveilcrates/keys/ that opens this crate.
+  "requiredKey": "donor",
+  # Per-crate open cooldown. Use -1 to fall back to openCooldownSeconds in settings.json.
+  "cooldownSeconds": 0,
+  # id: Unique name for this reward entry.
+  # type: item or command
+  # item: Item ID for item rewards.
+  # minCount: Minimum amount rolled.
+  # maxCount: Maximum amount rolled.
+  # weight: Chance weight within the same rarity tier. Higher = more common inside that tier.
+  # rarity: common, uncommon, rare, epic, or legendary. Tier odds are set in settings.json.
+  # broadcast: Announce this reward to the whole server when won.
+  # displayName: Name shown in holograms and broadcasts.
+  # commands: For command rewards. Use {player} for the opener's name.
+  "rewards": [
+    {
+      "id": "diamond_blocks",
+      "type": "item",
+      "item": "minecraft:diamond_block",
+      "minCount": 1,
+      "maxCount": 2,
+      "weight": 20,
+      "rarity": "rare",
+      "broadcast": true,
+      "displayName": "Diamond Blocks"
+    },
+    {
+      "id": "netherite_ingot",
+      "type": "item",
+      "item": "minecraft:netherite_ingot",
+      "minCount": 1,
+      "maxCount": 1,
+      "weight": 8,
+      "rarity": "epic",
+      "broadcast": true,
+      "displayName": "Netherite Ingot"
+    },
+    {
+      "id": "enchanted_golden_apple",
+      "type": "item",
+      "item": "minecraft:enchanted_golden_apple",
+      "minCount": 1,
+      "maxCount": 2,
+      "weight": 5,
+      "rarity": "legendary",
+      "broadcast": true,
+      "displayName": "Enchanted Golden Apple"
+    },
+    {
+      "id": "donor_emeralds",
+      "type": "item",
+      "item": "minecraft:emerald",
+      "minCount": 8,
+      "maxCount": 16,
+      "weight": 40,
+      "rarity": "common",
+      "broadcast": false,
+      "displayName": "Emeralds"
+    },
+    {
+      "id": "donor_gold",
+      "type": "item",
+      "item": "minecraft:gold_block",
+      "minCount": 2,
+      "maxCount": 4,
+      "weight": 35,
+      "rarity": "uncommon",
+      "broadcast": false,
+      "displayName": "Gold Blocks"
+    }
+  ]
+}
