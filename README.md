@@ -20,6 +20,8 @@ Server-side Forge 1.20.1 crate keys, holograms, weighted rarity rolls, pity prot
 - `/crate override <type> <setting> <value>`
 - `/crate settings rollanimation ...`, `/crate cleanupholograms`
 
+Roll animation uses `maximumSteps` as the exact maximum number of reward previews before showing the winner. Set it with `/crate settings rollanimation maximumsteps <1-1000>`.
+
 Administrative permission level is controlled by `adminPermissionLevel`; empty-hand editor access uses `editorPermissionLevel`.
 
 ## Configuration

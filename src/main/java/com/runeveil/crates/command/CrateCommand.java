@@ -87,9 +87,9 @@ public final class CrateCommand {
                                 .then(Commands.literal("ticksperstep")
                                         .then(Commands.argument("value", IntegerArgumentType.integer(1, 200))
                                                 .executes(ctx -> setRollAnimationNumber(ctx.getSource(), configSupplier.get(), "ticksPerStep", IntegerArgumentType.getInteger(ctx, "value")))))
-                                .then(Commands.literal("minimumsteps")
+                                .then(Commands.literal("maximumsteps")
                                         .then(Commands.argument("value", IntegerArgumentType.integer(1, 1000))
-                                                .executes(ctx -> setRollAnimationNumber(ctx.getSource(), configSupplier.get(), "minimumSteps", IntegerArgumentType.getInteger(ctx, "value")))))
+                                                .executes(ctx -> setRollAnimationNumber(ctx.getSource(), configSupplier.get(), "maximumSteps", IntegerArgumentType.getInteger(ctx, "value")))))
                                 .then(Commands.literal("finalholdticks")
                                         .then(Commands.argument("value", IntegerArgumentType.integer(1, 1200))
                                                 .executes(ctx -> setRollAnimationNumber(ctx.getSource(), configSupplier.get(), "finalHoldTicks", IntegerArgumentType.getInteger(ctx, "value")))))))
@@ -143,7 +143,7 @@ public final class CrateCommand {
         source.sendSuccess(() -> Component.literal(
                 "Roll animation: enabled=" + roll.enabled
                         + ", ticksPerStep=" + roll.ticksPerStep
-                        + ", minimumSteps=" + roll.minimumSteps
+                        + ", maximumSteps=" + roll.maximumSteps
                         + ", finalHoldTicks=" + roll.finalHoldTicks), false);
         return 1;
     }
@@ -164,7 +164,7 @@ public final class CrateCommand {
         }
         switch (setting) {
             case "ticksPerStep" -> manager.getSettings().rollAnimation.ticksPerStep = value;
-            case "minimumSteps" -> manager.getSettings().rollAnimation.minimumSteps = value;
+            case "maximumSteps" -> manager.getSettings().rollAnimation.maximumSteps = value;
             case "finalHoldTicks" -> manager.getSettings().rollAnimation.finalHoldTicks = value;
             default -> {
                 source.sendFailure(Component.literal("Unknown roll animation setting: " + setting));

@@ -38,7 +38,7 @@ public final class CrateRollAnimation {
             return;
         }
 
-        List<RewardEntry> sequence = buildSequence(pool, winner, settings.minimumSteps);
+        List<RewardEntry> sequence = buildSequence(pool, settings.maximumSteps);
         ActiveRoll roll = new ActiveRoll(level, pos, crate, winner, player, manager, sequence, settings, onComplete);
         ACTIVE.add(roll);
     }
@@ -62,17 +62,15 @@ public final class CrateRollAnimation {
         return false;
     }
 
-    private static List<RewardEntry> buildSequence(List<RewardEntry> pool, RewardEntry winner, int minimumSteps) {
+    static List<RewardEntry> buildSequence(List<RewardEntry> pool, int maximumSteps) {
         List<RewardEntry> sequence = new ArrayList<>();
-        List<RewardEntry> shuffled = new ArrayList<>(pool);
-        Collections.shuffle(shuffled);
-        while (sequence.size() < Math.max(minimumSteps, 20)) {
-            sequence.addAll(shuffled);
+        int previewCount = Math.max(1, maximumSteps);
+        while (sequence.size() < previewCount) {
+            List<RewardEntry> shuffled = new ArrayList<>(pool);
+            Collections.shuffle(shuffled);
+            int remaining = previewCount - sequence.size();
+            sequence.addAll(shuffled.subList(0, Math.min(remaining, shuffled.size())));
         }
-        for (int i = 0; i < 6; i++) {
-            sequence.add(pool.get(i % pool.size()));
-        }
-        sequence.add(winner);
         return sequence;
     }
 

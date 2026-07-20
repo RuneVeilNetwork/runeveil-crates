@@ -90,6 +90,7 @@ public class CrateConfigManager {
             copyDefaultsIfMissing("readme.txt", configDir.resolve("readme.txt"));
 
             migrateLegacyConfig(settingsFile);
+            migrateMaximumStepsSetting(settingsFile);
             migrateLegacyConfig(locationsFile);
             migrateLegacyDirectory(keysDir);
             migrateLegacyDirectory(cratesDir);
@@ -174,7 +175,7 @@ public class CrateConfigManager {
             SettingsConfig.RollAnimation roll = settings.rollAnimation;
             section = replaceSetting(section, "enabled", Boolean.toString(roll.enabled));
             section = replaceSetting(section, "ticksPerStep", Integer.toString(roll.ticksPerStep));
-            section = replaceSetting(section, "minimumSteps", Integer.toString(roll.minimumSteps));
+            section = replaceSetting(section, "maximumSteps", Integer.toString(roll.maximumSteps));
             section = replaceSetting(section, "finalHoldTicks", Integer.toString(roll.finalHoldTicks));
             Files.writeString(settingsFile,
                     content.substring(0, sectionStart) + section + content.substring(sectionEnd + 1),
@@ -191,6 +192,17 @@ public class CrateConfigManager {
                 "(\\\"" + java.util.regex.Pattern.quote(key) + "\\\"\\s*:\\s*)(true|false|-?\\d+)",
                 "$1" + value
         );
+    }
+
+    private static void migrateMaximumStepsSetting(Path path) throws IOException {
+        String content = Files.readString(path, StandardCharsets.UTF_8);
+        if (!content.contains("\"minimumSteps\"")) {
+            return;
+        }
+        Path backup = path.resolveSibling(path.getFileName() + ".pre-1.3.1.bak");
+        Files.copy(path, backup, StandardCopyOption.REPLACE_EXISTING);
+        Files.writeString(path, content.replace("\"minimumSteps\"", "\"maximumSteps\""), StandardCharsets.UTF_8);
+        RuneveilCratesMod.LOGGER.info("Migrated rollAnimation.minimumSteps to maximumSteps in {}", path);
     }
 
     public MinecraftServer getServer() {

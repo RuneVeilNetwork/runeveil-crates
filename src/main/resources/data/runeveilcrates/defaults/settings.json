@@ -94,8 +94,8 @@
     "enabled": true,
     # How long each preview item stays on screen during the roll (20 ticks = 1 second).
     "ticksPerStep": 2,
-    # Minimum number of preview items shown before the winning reward is revealed.
-    "minimumSteps": 24,
+    # Maximum number of preview rewards shown before the winning reward is revealed.
+    "maximumSteps": 24,
     # How long the winning reward name stays visible before the hologram returns to the crate label.
     "finalHoldTicks": 20
   },

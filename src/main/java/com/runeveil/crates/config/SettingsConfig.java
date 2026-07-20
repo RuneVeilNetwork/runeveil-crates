@@ -70,7 +70,7 @@ public class SettingsConfig {
     public static class RollAnimation {
         public boolean enabled = true;
         public int ticksPerStep = 2;
-        public int minimumSteps = 24;
+        public int maximumSteps = 24;
         public int finalHoldTicks = 20;
     }
 
