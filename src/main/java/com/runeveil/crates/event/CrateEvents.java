@@ -9,12 +9,14 @@ import com.runeveil.crates.service.CrateService;
 import com.runeveil.crates.service.KeyService;
 import com.runeveil.crates.service.PendingKeyService;
 import com.runeveil.crates.visual.CrateRollAnimation;
+import com.runeveil.crates.visual.CrateHologramManager;
 import com.runeveil.crates.util.MessageUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.ChunkEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -50,6 +52,18 @@ public class CrateEvents {
         }
         VotifierIntegration.processUberswePendingVotes(player, configManager);
         PendingKeyService.deliver(player, configManager);
+    }
+
+    @SubscribeEvent
+    public static void onChunkLoad(ChunkEvent.Load event) {
+        if (configManager == null || !(event.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) {
+            return;
+        }
+        net.minecraft.world.level.ChunkPos chunkPos = event.getChunk().getPos();
+        level.getServer().tell(new net.minecraft.server.TickTask(
+                level.getServer().getTickCount() + 1,
+                () -> CrateHologramManager.refreshChunk(configManager, level, chunkPos)
+        ));
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

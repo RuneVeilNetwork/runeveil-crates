@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
@@ -56,6 +57,25 @@ public final class CrateHologramManager {
                 showCrateLabel(level, pos, crate, settings);
             }
         });
+    }
+
+    public static void refreshChunk(CrateConfigManager manager, ServerLevel level, ChunkPos chunkPos) {
+        SettingsConfig settings = manager.getSettings();
+        manager.getLocations().locations.forEach((locationKey, crateId) -> {
+            BlockPos pos = CrateLocationKey.decodePos(locationKey);
+            ResourceKey<Level> dimension = parseDimensionKey(locationKey);
+            if (pos == null || dimension == null || !dimension.equals(level.dimension()) || !isInChunk(pos, chunkPos)) {
+                return;
+            }
+            CrateDefinition crate = manager.getCrate(crateId);
+            if (crate != null) {
+                showCrateLabel(level, pos, crate, settings);
+            }
+        });
+    }
+
+    static boolean isInChunk(BlockPos pos, ChunkPos chunkPos) {
+        return (pos.getX() >> 4) == chunkPos.x && (pos.getZ() >> 4) == chunkPos.z;
     }
 
     public static int cleanupAll(MinecraftServer server) {
