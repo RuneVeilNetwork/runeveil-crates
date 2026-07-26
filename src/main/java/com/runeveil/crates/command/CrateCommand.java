@@ -67,6 +67,14 @@ public final class CrateCommand {
                                                         StringArgumentType.getString(ctx, "type"),
                                                         EntityArgument.getPlayer(ctx, "player"),
                                                         IntegerArgumentType.getInteger(ctx, "amount")
+                                                ))))
+                                .then(Commands.argument("amount", IntegerArgumentType.integer(1, 64))
+                                        .then(Commands.literal("all")
+                                                .executes(ctx -> giveKeyAll(
+                                                        ctx.getSource(),
+                                                        configSupplier.get(),
+                                                        StringArgumentType.getString(ctx, "type"),
+                                                        IntegerArgumentType.getInteger(ctx, "amount")
                                                 ))))))
                 .then(Commands.literal("reload")
                         .requires(source -> hasAdminPermission(source, configSupplier))
@@ -232,16 +240,41 @@ public final class CrateCommand {
             source.sendFailure(Component.literal("Unknown key type: " + type));
             return 0;
         }
-        var stack = KeyService.createKey(manager, type, amount);
-        if (stack.isEmpty() || !target.getInventory().add(stack)) {
-            target.drop(stack, false);
-        }
+        giveKeyToPlayer(manager, type, target, amount);
         String template = manager.getSettings().messages.getOrDefault("giveKey", "&aGave &6{amount} &r{key}&a to &e{player}&a.");
         source.sendSuccess(() -> MessageUtil.format(template,
                 "amount", String.valueOf(amount),
                 "key", key.displayName,
                 "player", target.getGameProfile().getName()), true);
         return 1;
+    }
+
+    private static int giveKeyAll(CommandSourceStack source, CrateConfigManager manager, String type, int amount) {
+        if (manager == null) {
+            source.sendFailure(Component.literal("Crate system is not loaded yet."));
+            return 0;
+        }
+        KeyConfig key = manager.getKey(type);
+        if (key == null) {
+            source.sendFailure(Component.literal("Unknown key type: " + type));
+            return 0;
+        }
+        int recipients = 0;
+        for (ServerPlayer player : manager.getServer().getPlayerList().getPlayers()) {
+            giveKeyToPlayer(manager, type, player, amount);
+            recipients++;
+        }
+        int delivered = recipients;
+        source.sendSuccess(() -> Component.literal("Gave " + amount + " " + key.displayName
+                + " to all " + delivered + " online player(s)."), true);
+        return recipients > 0 ? recipients : 1;
+    }
+
+    private static void giveKeyToPlayer(CrateConfigManager manager, String type, ServerPlayer target, int amount) {
+        var stack = KeyService.createKey(manager, type, amount);
+        if (stack.isEmpty() || !target.getInventory().add(stack)) {
+            target.drop(stack, false);
+        }
     }
 
     private static int reload(CommandSourceStack source, CrateConfigManager manager) {

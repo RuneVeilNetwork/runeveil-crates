@@ -13,6 +13,7 @@ Server-side Forge 1.20.1 crate keys, holograms, weighted rarity rolls, pity prot
 
 - `/crate convert <type>`, `/crate unconvert`, `/crate info`, `/crate edit`
 - `/crate givekey <type> [player] [amount]`
+- `/crate givekey <type> <amount> all` gives that key and amount to everyone online
 - `/crate givekeyoffline <type> <uuid> <amount>`
 - `/crate preview <type>`, `/crate validate`, `/crate reload`
 - `/crate duplicate <source> <newId>`, `/crate rename <oldId> <newId>`
