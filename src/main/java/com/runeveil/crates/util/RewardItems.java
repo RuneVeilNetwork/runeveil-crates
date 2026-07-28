@@ -23,8 +23,10 @@ public final class RewardItems {
     public static RewardEntry createRewardFromStack(ItemStack stack, String rarity, String idSuffix) {
         RewardEntry reward = new RewardEntry();
         String baseId = java.util.Objects.requireNonNull(ForgeRegistries.ITEMS.getKey(stack.getItem())).toString().replace(':', '_');
-        reward.id = idSuffix == null || idSuffix.isBlank() ? baseId : baseId + "_" + idSuffix;
         captureFromStack(reward, stack);
+        reward.id = idSuffix == null || idSuffix.isBlank()
+                ? baseId + "_" + Integer.toUnsignedString(reward.itemStackNbt.hashCode(), 36)
+                : baseId + "_" + idSuffix;
         reward.weight = 10;
         reward.rarity = rarity;
         return reward;

@@ -7,7 +7,6 @@ import com.runeveil.crates.config.SettingsConfig;
 import com.runeveil.crates.util.MessageUtil;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
 
 public final class VoteRewardService {
     private VoteRewardService() {
@@ -26,15 +25,7 @@ public final class VoteRewardService {
             return;
         }
 
-        ItemStack stack = KeyService.createKey(configManager, settings.voteKeyId, totalKeys);
-        if (stack.isEmpty()) {
-            RuneveilCratesMod.LOGGER.warn("Vote reward skipped: failed to create key '{}'", settings.voteKeyId);
-            return;
-        }
-
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
-        }
+        PendingKeyService.giveOrQueue(player, configManager, settings.voteKeyId, totalKeys);
 
         runExtraCommands(player.getServer(), player.getGameProfile().getName(), settings, voteCount);
 

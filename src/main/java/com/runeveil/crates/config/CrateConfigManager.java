@@ -101,13 +101,13 @@ public class CrateConfigManager {
             PendingKeyStorage candidatePending = Files.exists(pendingKeysFile) ? readJsonStrict(pendingKeysFile, PendingKeyStorage.class) : new PendingKeyStorage();
             Map<String, KeyConfig> candidateKeys = new LinkedHashMap<>();
             Map<String, CrateDefinition> candidateCrates = new LinkedHashMap<>();
-            loadDirectoryStrict(keysDir, KeyConfig.class, candidateKeys);
-            loadDirectoryStrict(cratesDir, CrateDefinition.class, candidateCrates);
-            List<String> errors = ConfigValidator.validate(candidateSettings, candidateKeys, candidateCrates);
+            List<String> errors = new ArrayList<>();
+            loadDirectoryTolerant(keysDir, KeyConfig.class, candidateKeys, errors);
+            loadDirectoryTolerant(cratesDir, CrateDefinition.class, candidateCrates, errors);
+            errors.addAll(ConfigValidator.validate(candidateSettings, candidateKeys, candidateCrates));
             validationErrors = List.copyOf(errors);
             if (!errors.isEmpty()) {
-                RuneveilCratesMod.LOGGER.error("Rejected crate configuration reload with {} error(s): {}", errors.size(), String.join("; ", errors));
-                return;
+                RuneveilCratesMod.LOGGER.warn("Loaded usable crate configuration with {} validation warning(s): {}", errors.size(), String.join("; ", errors));
             }
             settings = candidateSettings;
             locations = candidateLocations;
@@ -336,17 +336,24 @@ public class CrateConfigManager {
         }
     }
 
-    private static <T> void loadDirectoryStrict(Path dir, Class<T> type, Map<String, T> target) throws IOException {
+    private static <T> void loadDirectoryTolerant(Path dir, Class<T> type, Map<String, T> target, List<String> errors) throws IOException {
         if (!Files.isDirectory(dir)) return;
         try (Stream<Path> files = Files.list(dir)) {
             for (Path path : files.filter(p -> p.toString().endsWith(".json")).toList()) {
-                T value = readJsonStrict(path, type);
-                String id = path.getFileName().toString().replace(".json", "");
-                if (value instanceof KeyConfig key && key.id != null && !key.id.isBlank()) id = key.id;
-                if (value instanceof CrateDefinition crate && crate.id != null && !crate.id.isBlank()) id = crate.id;
-                String normalized = normalize(id);
-                if (target.containsKey(normalized)) throw new IOException("Duplicate configured id: " + normalized);
-                target.put(normalized, value);
+                try {
+                    T value = readJsonStrict(path, type);
+                    String id = path.getFileName().toString().replace(".json", "");
+                    if (value instanceof KeyConfig key && key.id != null && !key.id.isBlank()) id = key.id;
+                    if (value instanceof CrateDefinition crate && crate.id != null && !crate.id.isBlank()) id = crate.id;
+                    String normalized = normalize(id);
+                    if (target.containsKey(normalized)) {
+                        errors.add("Skipped " + path.getFileName() + ": duplicate configured id " + normalized);
+                        continue;
+                    }
+                    target.put(normalized, value);
+                } catch (Exception e) {
+                    errors.add("Skipped " + path.getFileName() + ": " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+                }
             }
         }
     }

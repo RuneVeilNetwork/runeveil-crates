@@ -54,11 +54,9 @@ public final class ConfigValidator {
         String policy = normalizePolicy(crate.inventoryFullPolicy);
         if (!"inherit".equals(policy) && !INVENTORY_POLICIES.contains(policy)) errors.add("Crate " + id + " inventoryFullPolicy must be inherit, drop, deny, or discard");
         if (crate.rewards == null || crate.rewards.isEmpty()) { errors.add("Crate " + id + " has no rewards"); return; }
-        Set<String> rewardIds = new HashSet<>();
         for (RewardEntry reward : crate.rewards) {
             if (reward == null) { errors.add("Crate " + id + " contains a null reward"); continue; }
             if (reward.id == null || reward.id.isBlank()) errors.add("Crate " + id + " contains a reward with a blank id");
-            else if (!rewardIds.add(reward.id)) errors.add("Crate " + id + " has duplicate reward id " + reward.id);
             if (reward.weight < 1) errors.add("Reward " + reward.id + " in " + id + " must have weight >= 1");
             if (!RarityDefinitions.ALL.contains(RarityDefinitions.normalize(reward.rarity))) errors.add("Reward " + reward.id + " in " + id + " has invalid rarity " + reward.rarity);
             if ("command".equalsIgnoreCase(reward.type)) {

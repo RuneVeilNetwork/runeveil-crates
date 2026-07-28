@@ -51,7 +51,7 @@ public class CrateEvents {
             return;
         }
         VotifierIntegration.processUberswePendingVotes(player, configManager);
-        PendingKeyService.deliver(player, configManager);
+        PendingKeyService.notifyPending(player, configManager);
     }
 
     @SubscribeEvent

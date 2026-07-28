@@ -11,7 +11,6 @@ import com.runeveil.crates.config.KeyConfig;
 import com.runeveil.crates.gui.CrateEditorService;
 import com.runeveil.crates.integration.VotifierIntegration;
 import com.runeveil.crates.service.CrateService;
-import com.runeveil.crates.service.KeyService;
 import com.runeveil.crates.service.PendingKeyService;
 import com.runeveil.crates.service.RewardProbabilityService;
 import com.runeveil.crates.storage.CrateLocationKey;
@@ -57,25 +56,22 @@ public final class CrateCommand {
                                     }
                                     return builder.buildFuture();
                                 })
-                                .executes(ctx -> giveKey(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), ctx.getSource().getPlayerOrException(), 1))
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(ctx -> giveKey(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), EntityArgument.getPlayer(ctx, "player"), 1))
+                                .executes(ctx -> giveKey(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), java.util.List.of(ctx.getSource().getPlayerOrException()), 1))
+                                .then(Commands.argument("player", EntityArgument.players())
+                                        .executes(ctx -> giveKey(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), EntityArgument.getPlayers(ctx, "player"), 1))
                                         .then(Commands.argument("amount", IntegerArgumentType.integer(1, 64))
                                                 .executes(ctx -> giveKey(
                                                         ctx.getSource(),
                                                         configSupplier.get(),
                                                         StringArgumentType.getString(ctx, "type"),
-                                                        EntityArgument.getPlayer(ctx, "player"),
+                                                        EntityArgument.getPlayers(ctx, "player"),
                                                         IntegerArgumentType.getInteger(ctx, "amount")
                                                 ))))
                                 .then(Commands.argument("amount", IntegerArgumentType.integer(1, 64))
                                         .then(Commands.literal("all")
-                                                .executes(ctx -> giveKeyAll(
-                                                        ctx.getSource(),
-                                                        configSupplier.get(),
-                                                        StringArgumentType.getString(ctx, "type"),
-                                                        IntegerArgumentType.getInteger(ctx, "amount")
-                                                ))))))
+                                                .executes(ctx -> giveKeyAll(ctx.getSource(), configSupplier.get(), StringArgumentType.getString(ctx, "type"), IntegerArgumentType.getInteger(ctx, "amount")))))))
+                .then(Commands.literal("accept")
+                        .executes(ctx -> PendingKeyService.accept(ctx.getSource().getPlayerOrException(), configSupplier.get())))
                 .then(Commands.literal("reload")
                         .requires(source -> hasAdminPermission(source, configSupplier))
                         .executes(ctx -> reload(ctx.getSource(), configSupplier.get())))
@@ -230,7 +226,7 @@ public final class CrateCommand {
         return CrateService.unconvert(player, manager, pos) ? 1 : 0;
     }
 
-    private static int giveKey(CommandSourceStack source, CrateConfigManager manager, String type, ServerPlayer target, int amount) {
+    private static int giveKey(CommandSourceStack source, CrateConfigManager manager, String type, java.util.Collection<ServerPlayer> targets, int amount) {
         if (manager == null) {
             source.sendFailure(Component.literal("Crate system is not loaded yet."));
             return 0;
@@ -240,13 +236,14 @@ public final class CrateCommand {
             source.sendFailure(Component.literal("Unknown key type: " + type));
             return 0;
         }
-        giveKeyToPlayer(manager, type, target, amount);
+        targets.forEach(target -> PendingKeyService.giveOrQueue(target, manager, type, amount));
+        String playerName = targets.size() == 1 ? targets.iterator().next().getGameProfile().getName() : targets.size() + " players";
         String template = manager.getSettings().messages.getOrDefault("giveKey", "&aGave &6{amount} &r{key}&a to &e{player}&a.");
         source.sendSuccess(() -> MessageUtil.format(template,
                 "amount", String.valueOf(amount),
                 "key", key.displayName,
-                "player", target.getGameProfile().getName()), true);
-        return 1;
+                "player", playerName), true);
+        return targets.size();
     }
 
     private static int giveKeyAll(CommandSourceStack source, CrateConfigManager manager, String type, int amount) {
@@ -261,20 +258,13 @@ public final class CrateCommand {
         }
         int recipients = 0;
         for (ServerPlayer player : manager.getServer().getPlayerList().getPlayers()) {
-            giveKeyToPlayer(manager, type, player, amount);
+            PendingKeyService.giveOrQueue(player, manager, type, amount);
             recipients++;
         }
         int delivered = recipients;
         source.sendSuccess(() -> Component.literal("Gave " + amount + " " + key.displayName
                 + " to all " + delivered + " online player(s)."), true);
         return recipients > 0 ? recipients : 1;
-    }
-
-    private static void giveKeyToPlayer(CrateConfigManager manager, String type, ServerPlayer target, int amount) {
-        var stack = KeyService.createKey(manager, type, amount);
-        if (stack.isEmpty() || !target.getInventory().add(stack)) {
-            target.drop(stack, false);
-        }
     }
 
     private static int reload(CommandSourceStack source, CrateConfigManager manager) {
@@ -347,6 +337,15 @@ public final class CrateCommand {
 
     private static int giveKeyOffline(CommandSourceStack source, CrateConfigManager manager, String type, String uuidText, int amount) {
         try {
+            if ("@a".equalsIgnoreCase(uuidText) || "all".equalsIgnoreCase(uuidText)) {
+                int queued = 0;
+                for (ServerPlayer player : manager.getServer().getPlayerList().getPlayers()) {
+                    if (PendingKeyService.queue(manager, player.getUUID(), type, amount)) queued++;
+                }
+                int recipients = queued;
+                source.sendSuccess(() -> Component.literal("Queued " + amount + " " + type + " key(s) for all " + recipients + " online player(s)."), true);
+                return recipients > 0 ? recipients : 1;
+            }
             UUID uuid = UUID.fromString(uuidText);
             if (!PendingKeyService.queue(manager, uuid, type, amount)) throw new IllegalArgumentException();
             source.sendSuccess(() -> Component.literal("Queued " + amount + " " + type + " key(s) for " + uuid + "."), true);
